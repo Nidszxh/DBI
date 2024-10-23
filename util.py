@@ -41,8 +41,7 @@ def deserialize(filename):
 
 # Key/Range Checks
 def withinBounds(key, lower_bound, upper_bound):
-    #To check if the key is within the range.
-    return lower_bound <= key <= upper_bound
+    return lower_bound <= key <= upper_bound    #To check if the key is within the range.
 
 def compareKeys(key1, key2):
     if key1 == key2:
@@ -55,42 +54,39 @@ def compareKeys(key1, key2):
 def generate_backup_filename():
     return f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-def print_operation_status(operation, success):
-    status = "succeeded" if success else "failed"
+def operation_status(operation, success):
+    if success:
+        status = "succeeded"
+    else:
+        status = "failed"
     print(f"{operation.capitalize()} {status}.")
 
 # Error Handling
 def handle_file_not_found(filepath):
-    """Handles file not found error."""
     print(f"Error: The file '{filepath}' does not exist.")
 
 def handle_invalid_data_type(data_type):
-    """Handles invalid data type errors."""
     print(f"Error: Invalid data type '{data_type}' provided.")
 
-# Logging Utility
 def setup_logging(log_file='app.log'):
-    """Sets up logging configuration."""
-    logging.basicConfig(filename=log_file,
-                        level=logging.INFO,
+    logging.basicConfig(filename=log_file, level=logging.INFO, 
                         format='%(asctime)s - %(levelname)s - %(message)s')
 
 def log_operation(message):
-    """Logs a message indicating an operation status."""
     logging.info(message)
 
 # Backup and Restore Functions
 def create_backup(data, backup_dir='backups'):
-    """Creates a backup of the given data."""
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
     backup_filename = generate_backup_filename()
-    serialize(data, os.path.join(backup_dir, backup_filename))
+    backup_path = os.path.join(backup_dir, backup_filename)
+    serialize(data, backup_path)    #Serializes the data and saves it in the backup file
     log_operation(f"Backup created: {backup_filename}")
 
-def restore_from_backup(backup_filename, backup_dir='backups'):
-    """Restores data from a backup file."""
-    restored_data = deserialize(os.path.join(backup_dir, backup_filename))
+def restore_backup(backup_filename, backup_dir='backups'):
+    backup_path = os.path.join(backup_dir, backup_filename)
+    restored_data = deserialize(backup_path)   # Deserializes the data from the backup file
     if restored_data is not None:
         log_operation(f"Data restored from backup: {backup_filename}")
     return restored_data
