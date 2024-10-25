@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B+ Tree Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            background-color: #006400;
+            color: #FFD700;
+            margin: 0;
+            padding: 20px;
+            font-size: 2.5em;
+        }
+        .controls {
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-bottom: 1px solid #006400;
+        }
+        .buttons input {
+            margin: 0 5px;
+            padding: 2px 5px;
+        }
+        .buttons button {
+            margin: 0 5px;
+            padding: 2px 10px;
+        }
+        .tree-options {
+            margin-top: 10px;
+        }
+        .tree-options label {
+            margin-right: 15px;
+        }
+        canvas {
+            margin-top: 20px;
+            display: block;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>B<sup>+</sup> Trees</h1>
+    
+    <div class="controls">
+        <div class="buttons">
+            <input type="text" id="keyInput" placeholder="Enter key" style="width: 100px;">
+            <input type="text" id="valueInput" placeholder="Enter value" style="width: 100px;">
+            <button onclick="insertKeyValue()">Insert</button>
+            <input type="text" id="deleteKeyInput" placeholder="Enter key to delete" style="width: 100px;">
+            <button onclick="deleteKey()">Delete</button>
+            <button onclick="findKey()">Find</button>
+            <button onclick="printTree()">Print</button>
+            <button onclick="clearTree()">Clear</button>
+        </div>
+
+        <div class="tree-options">
+            <label><input type="radio" name="degree" value="3" checked onchange="updateDegree(this.value)"> Max. Degree = 3 </label>
+            <label><input type="radio" name="degree" value="4" onchange="updateDegree(this.value)"> Max. Degree = 4 </label>
+            <label><input type="radio" name="degree" value="5" onchange="updateDegree(this.value)"> Max. Degree = 5 </label>
+            <label><input type="radio" name="degree" value="6" onchange="updateDegree(this.value)"> Max. Degree = 6 </label>
+            <label><input type="radio" name="degree" value="7" onchange="updateDegree(this.value)"> Max. Degree = 7 </label>
+        </div>
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <canvas id="treeCanvas" width="1000" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function drawNode(ctx, node, x, y, offset) {
+            const nodeWidth = 60;
+            const nodeHeight = 30;
+            
+            // Draw node rectangle
+            ctx.beginPath();
+            ctx.strokeStyle = '#008000';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.rect(x - nodeWidth/2, y - nodeHeight/2, nodeWidth, nodeHeight);
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw keys
+            ctx.fillStyle = '#000000';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.keys.join(' '), x, y);
+
+            if (node.children && node.children.length > 0) {
+                const childOffset = offset / 1.5;
+                node.children.forEach((child, index) => {
+                    const childX = x - offset + (index * offset * 2 / (node.children.length - 1));
+                    const childY = y + 80;
+
+                    // Draw connection lines
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#008000';
+                    ctx.moveTo(x, y + nodeHeight/2);
+                    ctx.lineTo(childX, childY - nodeHeight/2);
+                    ctx.stroke();
+
+                    drawNode(ctx, child, childX, childY, childOffset);
+                });
+            }
+
+            // Draw horizontal links between leaf nodes
+            if (node.isLeaf && node.next) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#008000';
+                ctx.moveTo(x + nodeWidth/2, y);
+                ctx.lineTo(x + offset, y);
+                ctx.stroke();
+                
+                // Draw arrow
+                ctx.beginPath();
+                ctx.moveTo(x + offset - 10, y - 5);
+                ctx.lineTo(x + offset, y);
+                ctx.lineTo(x + offset - 10, y + 5);
+                ctx.stroke();
+            }
+        }
+
+        function updateTree() {
+            fetch('/get_tree')
+                .then(response => response.json())
+                .then(treeData => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (treeData && Object.keys(treeData).length > 0) {
+                        drawNode(ctx, treeData, canvas.width/2, 100, 200);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching tree:', error);
+                    showError('Failed to update tree visualization');
+                });
+        }
+
+        function insertKeyValue() {
+            const key = document.getElementById('keyInput').value;
+            const value = document.getElementById('valueInput').value;
+            
+            if (!key || !value) {
+                showError('Please enter both key and value');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('key', key);
+            formData.append('value', value);
+
+            fetch('/insert', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('keyInput').value = '';
+                    document.getElementById('valueInput').value = '';
+                    updateTree();
+                } else {
+                    showError(data.error || 'Failed to insert');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to insert');
+            });
+        }
+
+        function deleteKey() {
+            const key = document.getElementById('deleteKeyInput').value;
+            
+            if (!key) {
+                showError('Please enter a key to delete');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('key', key);
+
+            fetch('/delete', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('deleteKeyInput').value = '';
+                    updateTree();
+                } else {
+                    showError(data.error || 'Failed to delete');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to delete');
+            });
+        }
+
+        function updateDegree(degree) {
+            fetch('/update_degree', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `degree=${degree}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateTree();
+                } else {
+                    showError('Failed to update degree');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to update degree');
+            });
+        }
+
+        function findKey() {
+            // Implementation pending based on backend support
+            alert('Find functionality coming soon!');
+        }
+
+        function printTree() {
+            // Implementation pending based on backend support
+            alert('Print functionality coming soon!');
+        }
+
+        function clearTree() {
+            fetch('/clear', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateTree();
+                } else {
+                    showError('Failed to clear tree');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to clear tree');
+            });
+        }
+
+        // Initialize the visualization
+        window.onload = function() {
+            updateTree();
+        };
+    </script>
+</body>
+</html>

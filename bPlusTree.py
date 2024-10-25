@@ -1,19 +1,13 @@
-class Node:
-    def __init__(self, leaf=False):
-        self.leaf = leaf
-        self.keys = []
-        self.child = []
-        self.next = None  # For leaf node linking
-
+from node import Node
 class BplusTree:
     def __init__(self, order):
-        self.root = Node(True)
+        self.root = Node(True,order)
         self.order = order
         
     def insert(self, key, value):
         root = self.root
         if len(root.keys) == (2 * self.order) - 1:
-            temp = Node()
+            temp = Node(self.order)
             self.root = temp
             temp.child.insert(0, root)
             self.split_child(temp, 0)
@@ -44,7 +38,7 @@ class BplusTree:
     def split_child(self, x, i):
         order = self.order
         y = x.child[i]
-        z = Node(y.leaf)
+        z = Node(y.leaf,self.order)
         
         if y.leaf:
             mid = order - 1
@@ -94,3 +88,18 @@ class BplusTree:
             node = node.next
             
         return sorted(result, key=lambda x: x[0])
+    
+    
+    def to_dict(self):
+        """Convert the B+ tree structure to a dictionary for visualization."""
+        return self.node_to_dict(self.root)
+    
+    def node_to_dict(self, node):
+        """Helper function to convert a node to a dictionary."""
+        node_dict = {'keys': node.keys}
+        if node.leaf:
+            node_dict['values'] = node.values
+        else:
+            node_dict['children'] = [self.node_to_dict(child) for child in node.children]
+
+        return node_dict

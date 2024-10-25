@@ -9,7 +9,7 @@ logging.basicConfig(filename="db_log.log", level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s", filemode='a')
 
 class Database:
-    def __init__(self, order=3):
+    def __init__(self, order):
         logging.info("Initializing database with B+ Tree of order %s", order)
         self.btree = BplusTree(order)
 
@@ -110,3 +110,7 @@ class Database:
         print("Current Database Entries:")
         for key, value in self.btree.get_sorted_data():
             print(f"Key: {key}, Value: {value}")
+    
+    def get_tree_structure(self):
+        """Return a JSON representation of the B+ Tree for visualization."""
+        return self.btree.to_dict()  # Assuming `to_dict` is a method to convert the B+ Tree structure to a dict

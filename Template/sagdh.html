@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B+ Tree Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .config-section, .operation-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+        .success {
+            color: green;
+            margin-top: 5px;
+        }
+        #treeVisualization {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>B+ Tree Visualization</h1>
+        
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h2>Configure B+ Tree</h2>
+            <form id="configForm">
+                <label for="order">B+ Tree Order:</label>
+                <input type="number" id="order" min="2" required>
+                <button type="submit">Configure</button>
+            </form>
+            <div id="configStatus"></div>
+        </div>
+
+        <!-- Operations Section -->
+        <div class="operation-section">
+            <h2>Operations</h2>
+            
+            <!-- Insert Operation -->
+            <form id="insertForm">
+                <h3>Insert Key-Value Pair</h3>
+                <label for="insertKey">Key:</label>
+                <input type="number" id="insertKey" required>
+                <label for="insertValue">Value:</label>
+                <input type="text" id="insertValue" required>
+                <button type="submit">Insert</button>
+            </form>
+            <div id="insertStatus"></div>
+
+            <!-- Delete Operation -->
+            <form id="deleteForm">
+                <h3>Delete Key</h3>
+                <label for="deleteKey">Key:</label>
+                <input type="number" id="deleteKey" required>
+                <button type="submit">Delete</button>
+            </form>
+            <div id="deleteStatus"></div>
+        </div>
+
+        <!-- Tree Visualization -->
+        <div id="treeVisualization">
+            <h2>Current Tree Structure</h2>
+            <pre id="treeStructure"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Check initial configuration status
+        function checkStatus() {
+            $.get('/get_status', function(response) {
+                if (response.configured) {
+                    $('#configStatus').html(`<div class="success">B+ Tree configured with order ${response.order}</div>`);
+                    $('.operation-section').show();
+                } else {
+                    $('#configStatus').html('<div class="error">B+ Tree not configured</div>');
+                    $('.operation-section').hide();
+                }
+            });
+        }
+
+        // Update tree visualization
+        function updateTree() {
+            $.get('/get_tree', function(response) {
+                if (response.error) {
+                    $('#treeStructure').html(`<div class="error">${response.error}</div>`);
+                } else {
+                    $('#treeStructure').html(JSON.stringify(response, null, 2));
+                }
+            });
+        }
+
+        // Configure B+ Tree
+        $('#configForm').submit(function(e) {
+            e.preventDefault();
+            $.post('/configure', {
+                order: $('#order').val()
+            }, function(response) {
+                if (response.success) {
+                    $('#configStatus').html(`<div class="success">B+ Tree configured with order ${response.order}</div>`);
+                    $('.operation-section').show();
+                } else {
+                    $('#configStatus').html(`<div class="error">${response.error}</div>`);
+                }
+                updateTree();
+            });
+        });
+
+        // Insert key-value pair
+        $('#insertForm').submit(function(e) {
+            e.preventDefault();
+            $.post('/insert', {
+                key: $('#insertKey').val(),
+                value: $('#insertValue').val()
+            }, function(response) {
+                if (response.success) {
+                    $('#insertStatus').html('<div class="success">Inserted successfully</div>');
+                } else {
+                    $('#insertStatus').html(`<div class="error">${response.error}</div>`);
+                }
+                updateTree();
+            });
+        });
+
+        // Delete key
+        $('#deleteForm').submit(function(e) {
+            e.preventDefault();
+            $.post('/delete', {
+                key: $('#deleteKey').val()
+            }, function(response) {
+                if (response.success) {
+                    $('#deleteStatus').html('<div class="success">Deleted successfully</div>');
+                } else {
+                    $('#deleteStatus').html(`<div class="error">${response.error}</div>`);
+                }
+                updateTree();
+            });
+        });
+
+        // Initial setup
+        $(document).ready(function() {
+            checkStatus();
+            updateTree();
+            $('.operation-section').hide();
+        });
+    </script>
+</body>
+</html>

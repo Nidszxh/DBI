@@ -1,19 +1,20 @@
 import itertools
-
 class Node:
     # ID iterator to assign unique IDs to each node
     id_iter = itertools.count()
-
-    def __init__(self, order, is_leaf=False, parent=None):
+    
+    def __init__(self, order, leaf=False, parent = None):
         self.id = next(Node.id_iter)     # Assign unique ID to each node
         self.order = order               # Maximum keys a node can hold
-        self.is_leaf = is_leaf           # Whether this node is a leaf node
-        self.keys = []                   # Holds the keys in the node
+        self.leaf = leaf
+        self.keys = []
         self.values = []                 # Holds the values (records or child nodes)
-        self.next = None                 # Points to the next leaf node (if applicable)
+        self.next = None                 # For leaf node linkin
         self.parent = parent             # Pointer to the parent node (for easier traversal)
         self.write_id_to_file()
-
+        self.child = []
+        self.children = [] if not leaf else None
+    
     def write_id_to_file(self):
         """Write the node's unique ID to 'id.txt' for tracking."""
         with open('id.txt', 'a') as id_file:
@@ -29,7 +30,7 @@ class Node:
         mid_key = self.keys[mid_index]
 
         # Create a new node of the same type
-        new_node = Node(self.order, self.is_leaf, parent=self.parent)
+        new_node = Node(self.order, self.leaf, parent=self.parent)
         new_node.keys = self.keys[mid_index + 1:]      # Right half goes to the new node
         new_node.values = self.values[mid_index + 1:]  # Corresponding values
 
@@ -38,7 +39,7 @@ class Node:
         self.values = self.values[:mid_index + 1]      # One extra value for internal nodes
 
         # Maintain linked list in leaf nodes
-        if self.is_leaf:
+        if self.leaf:
             new_node.next = self.next
             self.next = new_node
 
@@ -84,7 +85,7 @@ class Node:
     
     def merge(self, sibling, parent_key):
         """Merge this node with a sibling node."""
-        if self.is_leaf:
+        if self.leaf:
             self.keys.extend(sibling.keys)
             self.values.extend(sibling.values)
             self.next = sibling.next  # Maintain leaf linkage
@@ -102,7 +103,7 @@ class Node:
     def bulk_insert(self, key_value_pairs):
         """Insert multiple key-value pairs in one go."""
         for key, value in key_value_pairs:
-            if self.is_leaf:
+            if self.leaf:
                 self.insert_in_leaf(key, value)
             else:
                 # Insert into internal nodes as necessary
