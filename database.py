@@ -2,7 +2,7 @@ import json
 import gzip
 import logging
 from functools import lru_cache
-from bplustree import BplusTree
+from bPlusTree import BplusTree
 import csv
 
 logging.basicConfig(filename="db_log.log", level=logging.INFO, 
