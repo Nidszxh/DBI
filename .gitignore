@@ -1,0 +1,8 @@
+__pycache__/
+idk/
+database_export.csv
+db_log.log
+id.txt
+test_backup.gz
+templates/
+app.py
