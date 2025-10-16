@@ -2,163 +2,160 @@ import itertools
 import bisect
 
 class Node:
+    """B+ Tree Node implementation"""
     id_iter = itertools.count()
 
     def __init__(self, order, leaf=False, parent=None):
-        # Initialize a node with order, leaf status, and parent reference
-        self.id = next(Node.id_iter)  # Unique ID for the node
-        self.order = order  # Max keys per node
-        self.leaf = leaf  # True if it's a leaf node
-        self.parent = parent  # Reference to the parent node
-        self.keys = []  # Keys in the node
-        self.values = []  # Values for leaf or child pointers for internal nodes
-        self.next = None  # Link to the next leaf node
-        self.children = [] if not leaf else None  # Child nodes for internal nodes
+        self.id = next(Node.id_iter)
+        self.order = order
+        self.leaf = leaf
+        self.parent = parent
+        self.keys = []
+        self.values = []  # Values for leaves, child pointers for internal
+        self.next = None  # Next leaf pointer
 
     def is_full(self):
-        # Check if node is at max capacity
+        """Check if node has reached maximum capacity"""
         return len(self.keys) >= self.order
 
+    def is_underflow(self):
+        """Check if node has too few keys"""
+        min_keys = (self.order + 1) // 2 - 1
+        return len(self.keys) < min_keys
+
     def split(self):
-        # Split a full node and return the new node and middle key
-        mid_index = self.order // 2  # Dynamically calculate midpoint
-        mid_key = self.keys[mid_index]
-
-        # Create the new node with the same order and type
+        """Split a full node into two nodes"""
+        mid_index = (self.order + 1) // 2
         new_node = Node(self.order, self.leaf, parent=self.parent)
-        new_node.keys = self.keys[mid_index + 1:]
-        new_node.values = self.values[mid_index + 1:]
-
-        # Keep only the left half in the current node
-        self.keys = self.keys[:mid_index]
-        self.values = self.values[:mid_index + 1]
-
-        if not self.leaf:
-            # Split children for internal nodes
-            new_node.children = self.children[mid_index + 1:]
-            self.children = self.children[:mid_index + 1]
-
-            # Update parent references for new children
-            for child in new_node.children:
-                child.parent = new_node
-        else:
-            # Link the new node in the leaf chain
+        
+        if self.leaf:
+            mid_key = self.keys[mid_index]
+            new_node.keys = self.keys[mid_index:]
+            new_node.values = self.values[mid_index:]
+            self.keys = self.keys[:mid_index]
+            self.values = self.values[:mid_index]
             new_node.next = self.next
             self.next = new_node
+        else:
+            mid_key = self.keys[mid_index]
+            new_node.keys = self.keys[mid_index + 1:]
+            new_node.values = self.values[mid_index + 1:]
+            self.keys = self.keys[:mid_index]
+            self.values = self.values[:mid_index + 1]
+            
+            for child in new_node.values:
+                child.parent = new_node
 
-        # Update parent references or create a new root
         if self.parent is None:
-            new_root = Node(self.order, leaf=False) 
+            new_root = Node(self.order, leaf=False)
             new_root.keys = [mid_key]
             new_root.values = [self, new_node]
             self.parent = new_root
             new_node.parent = new_root
-            return new_node, mid_key, new_root  # Return new root for tree updates
+            return new_node, mid_key, new_root
 
-        return new_node, mid_key, None  # No new root needed if not splitting root
+        return new_node, mid_key, None
 
     def insert_in_leaf(self, key, value):
-        # Insert a key-value pair in a sorted way for leaf nodes
+        """Insert key-value pair in sorted order"""
         idx = bisect.bisect_left(self.keys, key)
-        self.keys.insert(idx, key)
-        self.values.insert(idx, value)
+        if idx < len(self.keys) and self.keys[idx] == key:
+            self.values[idx] = value
+        else:
+            self.keys.insert(idx, key)
+            self.values.insert(idx, value)
 
     def insert_in_internal(self, key, right_child):
-        # Insert a key and right child pointer in an internal node
+        """Insert key and right child pointer"""
         idx = bisect.bisect_left(self.keys, key)
         self.keys.insert(idx, key)
         self.values.insert(idx + 1, right_child)
-
-    def remove_key(self, key):
-        # Remove a key and its corresponding value or child pointer
-        if key in self.keys:
-            index = self.keys.index(key)
-            self.keys.pop(index)
-            self.values.pop(index)
-        else:
-            raise KeyError(f"Key {key} not found in node {self.id}.")
-        
-        # Rebalance the tree if the node underflows
-        if not self.leaf and len(self.keys) < self.order // 2:
-            self.rebalance()
-
-    def rebalance(self):
-        # Handle rebalancing when a node underflows
-        if len(self.keys) < self.order // 2 and self.parent:
-            parent = self.parent
-            idx = parent.values.index(self)
-
-            # Borrow from a sibling or merge if needed
-            if idx > 0 and len(parent.values[idx - 1].keys) > self.order // 2:
-                self.borrow_from_sibling(parent.values[idx - 1], parent.keys[idx - 1], is_left_sibling=True)
-            elif idx < len(parent.values) - 1 and len(parent.values[idx + 1].keys) > self.order // 2:
-                self.borrow_from_sibling(parent.values[idx + 1], parent.keys[idx], is_left_sibling=False)
-            else:
-                sibling = parent.values[idx - 1] if idx > 0 else parent.values[idx + 1]
-                parent_key = parent.keys[idx - 1] if idx > 0 else parent.keys[idx]
-                self.merge(sibling, parent_key)
-                parent.remove_key(parent_key)
-
-    def borrow_from_sibling(self, sibling, parent_key, is_left_sibling):
-        # Borrow a key from a sibling
-        if is_left_sibling:
-            self.keys.insert(0, parent_key)
-            self.values.insert(0, sibling.values.pop(-1))
-            sibling_key = sibling.keys.pop(-1)
-        else:
-            self.keys.append(parent_key)
-            self.values.append(sibling.values.pop(0))
-            sibling_key = sibling.keys.pop(0)
-
-        # Update the parent's key
-        sibling.parent.keys[sibling.parent.keys.index(parent_key)] = sibling_key
-
-    def merge(self, sibling, parent_key):
-        # Merge this node with a sibling node
-        if self.leaf:
-            # Merge leaves
-            self.keys.extend(sibling.keys)
-            self.values.extend(sibling.values)
-            self.next = sibling.next  # Update leaf link
-        else:
-            # Merge internal nodes with the parent key
-            self.keys.append(parent_key)
-            self.keys.extend(sibling.keys)
-            self.values.extend(sibling.values)
-            for child in sibling.children:
-                child.parent = self
+        right_child.parent = self
 
     def search(self, key):
-        # Search for a key in the node and return its value or pointer
+        """Search for a key in the tree"""
         if self.leaf:
             idx = bisect.bisect_left(self.keys, key)
             if idx < len(self.keys) and self.keys[idx] == key:
                 return self.values[idx]
             return None
-        else:
-            for i, k in enumerate(self.keys):
-                if key < k:
-                    return self.children[i].search(key)
-            return self.children[-1].search(key)
+        idx = bisect.bisect_right(self.keys, key)
+        return self.values[idx].search(key)
+
+    def find_leaf(self, key):
+        """Find the leaf node where key should be located"""
+        if self.leaf:
+            return self
+        idx = bisect.bisect_right(self.keys, key)
+        return self.values[idx].find_leaf(key)
 
     def range_query(self, start_key, end_key):
-        # Return all key-value pairs within the range [start_key, end_key]
+        """Return all key-value pairs in range [start_key, end_key]"""
         result = []
+        start_leaf = self.find_leaf(start_key) if not self.leaf else self
+        
+        current = start_leaf
+        while current:
+            for k, v in zip(current.keys, current.values):
+                if k > end_key:
+                    return result
+                if k >= start_key:
+                    result.append((k, v))
+            current = current.next
+        
+        return result
+
+    def get_sibling(self, left=True):
+        """Get left or right sibling node"""
+        if not self.parent:
+            return None, None
+        
+        idx = self.parent.values.index(self)
+        
+        if left and idx > 0:
+            return self.parent.values[idx - 1], idx - 1
+        elif not left and idx < len(self.parent.values) - 1:
+            return self.parent.values[idx + 1], idx
+        
+        return None, None
+
+    def borrow_from_left(self, left_sibling, parent_key_idx):
+        """Borrow a key from left sibling"""
         if self.leaf:
-            current = self
-            while current:
-                for k, v in zip(current.keys, current.values):
-                    if start_key <= k <= end_key:
-                        result.append((k, v))
-                current = current.next  # Traverse leaf links
-            return result
+            self.keys.insert(0, left_sibling.keys.pop())
+            self.values.insert(0, left_sibling.values.pop())
+            self.parent.keys[parent_key_idx] = self.keys[0]
         else:
-            for i, k in enumerate(self.keys):
-                if start_key < k:
-                    result.extend(self.children[i].range_query(start_key, end_key))
-            result.extend(self.children[-1].range_query(start_key, end_key))
-            return result
+            self.keys.insert(0, self.parent.keys[parent_key_idx])
+            self.values.insert(0, left_sibling.values.pop())
+            self.values[0].parent = self
+            self.parent.keys[parent_key_idx] = left_sibling.keys.pop()
+
+    def borrow_from_right(self, right_sibling, parent_key_idx):
+        """Borrow a key from right sibling"""
+        if self.leaf:
+            self.keys.append(right_sibling.keys.pop(0))
+            self.values.append(right_sibling.values.pop(0))
+            self.parent.keys[parent_key_idx] = right_sibling.keys[0]
+        else:
+            self.keys.append(self.parent.keys[parent_key_idx])
+            self.values.append(right_sibling.values.pop(0))
+            self.values[-1].parent = self
+            self.parent.keys[parent_key_idx] = right_sibling.keys.pop(0)
+
+    def merge_with_right(self, right_sibling, parent_key_idx):
+        """Merge this node with right sibling"""
+        if self.leaf:
+            self.keys.extend(right_sibling.keys)
+            self.values.extend(right_sibling.values)
+            self.next = right_sibling.next
+        else:
+            self.keys.append(self.parent.keys[parent_key_idx])
+            self.keys.extend(right_sibling.keys)
+            self.values.extend(right_sibling.values)
+            
+            for child in right_sibling.values:
+                child.parent = self
 
     def __repr__(self):
-        # Return a concise string representation of the node
-        return f"Node(ID: {self.id}, Keys: {self.keys}, Leaf: {self.leaf})"
+        return f"Node(ID:{self.id}, Keys:{self.keys}, Leaf:{self.leaf})"
