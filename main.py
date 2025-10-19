@@ -5,9 +5,9 @@ import os
 
 def print_section(title):
     """Print a formatted section header"""
-    print(f"\n{'='*60}")
+    print(f"\n{'-'*60}")
     print(f"  {title}")
-    print(f"{'='*60}\n")
+    print(f"{'-'*60}\n")
 
 
 def test_basic_operations():
@@ -257,9 +257,63 @@ def test_validation():
     return db
 
 
+def test_persistence():
+    """Test persistent database with disk storage"""
+    print_section("TEST 9: Persistent Storage")
+    
+    from persistence import PersistentDatabase
+    
+    db_file = "test_persistent.db"
+    
+    # Create and populate persistent database
+    print(f"Creating persistent database: {db_file}")
+    with PersistentDatabase(db_file, order=4) as db:
+        print("\nInserting data into persistent database...")
+        for i in range(1, 6):
+            db.insert(i * 10, f"persistent_value_{i*10}")
+        print(f"✓ Inserted 5 entries")
+        print(f"Database size: {len(db)}")
+    
+    print("\n✓ Database saved to disk")
+    
+    # Simulate program restart - load from disk
+    print("\nSimulating program restart...")
+    print("Loading database from disk...")
+    
+    with PersistentDatabase(db_file, order=4) as db:
+        print(f"✓ Loaded database from {db_file}")
+        print(f"Database size after reload: {len(db)}")
+        
+        # Verify data persisted
+        print("\nVerifying persisted data:")
+        for key in [10, 30, 50]:
+            value = db.search(key)
+            print(f"  Key {key}: {value} {'✓' if value else '✗'}")
+        
+        # Add more data
+        print("\nAdding more data...")
+        db.insert(60, "new_value_60")
+        print(f"Database size: {len(db)}")
+    
+    # Load again to verify new data persisted
+    print("\nLoading again to verify new data persisted...")
+    with PersistentDatabase(db_file, order=4) as db:
+        print(f"Database size: {len(db)}")
+        print(f"Key 60 exists: {60 in db}")
+        print(f"Value: {db.search(60)}")
+    
+    # Cleanup
+    if os.path.exists(db_file):
+        os.remove(db_file)
+        print(f"\n✓ Cleaned up {db_file}")
+    
+    # Return regular database for final state display
+    return Database(order=4)
+
+
 def test_edge_cases():
     """Test edge cases and error handling"""
-    print_section("TEST 9: Edge Cases & Error Handling")
+    print_section("TEST 10: Edge Cases & Error Handling")
     
     db = Database(order=4)
     
@@ -310,9 +364,9 @@ def display_final_state(db):
 
 def main():
     """Run all tests"""
-    print("\n" + "="*60)
-    print("  B+ tree DB - Test Suite")
-    print("="*60)
+    print("\n" + "-"*60)
+    print("  B+ TREE DATABASE - COMPREHENSIVE TEST SUITE")
+    print("-"*60)
     
     try:
         # Run all test suites
@@ -324,6 +378,7 @@ def main():
         test_json_export_import()
         test_statistics()
         test_validation()
+        test_persistence()  # NEW: Test persistent storage
         db = test_edge_cases()
         
         # Show final state

@@ -6,3 +6,5 @@ id.txt
 test_backup.gz
 templates/
 app.py
+app.log
+instance/
