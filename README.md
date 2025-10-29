@@ -5,7 +5,7 @@ This library implements a widely used data structure in database systems to effi
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 🌟 Features
+## Features
 
 ### Core Operations
 - **Insertion** - Adds new elements into the tree, preserving its balanced structure
@@ -22,7 +22,7 @@ This library implements a widely used data structure in database systems to effi
 -  **Batch Operations** - Efficient bulk insertions
 -  **Dictionary Interface** - Pythonic `db[key]` syntax
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 DBI/
@@ -35,7 +35,7 @@ DBI/
 └── README.md         # This file
 ```
 
-## 🎯 How It Works
+## How It Works
 
 The B+ Tree is a self-balancing tree data structure that maintains sorted data and allows search, sequential access, insertion, and deletion operations in logarithmic time. It is frequently used in database systems for indexing due to its ability to store multiple keys in a single node, reducing disk I/O.
 
@@ -47,7 +47,7 @@ The B+ Tree is a self-balancing tree data structure that maintains sorted data a
 4. **Leaf Linking** - Leaf nodes are linked for efficient sequential access
 5. **Separation of Data** - Internal nodes guide searches, leaves store actual data
 
-## 🚀 Get Started
+## Get Started
 
 ### Installation
 
@@ -128,7 +128,7 @@ db.export_json("data.json")
 db.import_json("data.json")
 ```
 
-## 📊 Performance Characteristics
+## Performance Characteristics
 
 | Operation | Time Complexity | Space Complexity |
 |-----------|----------------|------------------|
@@ -142,7 +142,7 @@ Where:
 - `n` = number of keys in the tree
 - `k` = number of keys in the range query result
 
-## 🎯 Applications
+## Applications
 
 ### Database Indexing
 Efficiently handles database queries by serving as an indexing mechanism. The B+ Tree structure minimizes disk I/O operations, making it ideal for large datasets that don't fit in memory.
@@ -161,7 +161,7 @@ Serves as a practical example for understanding tree-based data structures in ac
 - Study database indexing concepts
 - Experiment with different node orders
 
-## 📖 API Reference
+## API Reference
 
 ### Database Class
 
